@@ -34,10 +34,14 @@ class Controller:
         self._update_view()
 
     def zoom_window(self, zoom_center: PixelCoords, amount: float) -> None:
+        zoom_center_before = self.apply_inverse_viewport_transform(zoom_center)
         self._window_size = Vec2(
-            self._window_size.x + amount,
-            self._window_size.y + amount,
+            self._window_size.x * (1 + amount),
+            self._window_size.y * (1 + amount),
         )
+        zoom_center_after = self.apply_inverse_viewport_transform(zoom_center)
+        pan_correction = zoom_center_after - zoom_center_before
+        self._window_pos -= Vec2(pan_correction.x, -pan_correction.y)
         self._update_view()
 
     def reset_window(self, scale: float) -> None:
@@ -94,7 +98,7 @@ class Controller:
 
         return Vec2(
             x=point.x / viewport_size.x * window_size.x + window_pos.x,
-            y=window_pos.y - 1 - point.y / viewport_size.y * window_size.y,
+            y=-window_pos.y + 1 - point.y / viewport_size.y * window_size.y,
         )
 
     def scale_viewport_vec_to_world(self, v: Vec2[int]) -> Vec2[float]:

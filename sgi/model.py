@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Generic, Protocol, TypeAlias, TypeVar
+from typing import Generic, Protocol, TypeAlias, TypeVar, Union
 
 Number = TypeVar("Number", int, float)
 
@@ -15,7 +15,15 @@ class Vec2(Generic[Number]):
     def __sub__(self, other: "Vec2[Number]") -> "Vec2[Number]":
         return Vec2(self.x - other.x, self.y - other.y)
 
-    def __mul__(self, other: "Vec2[Number]") -> "Vec2[Number]":
+    def __mul__(self, other: Union["Vec2[Number]", float]) -> "Vec2[Number]":
+        if isinstance(other, float):
+            x = self.x * other
+            y = self.y * other
+            if isinstance(self.x, int):
+                return Vec2(int(x), int(y))
+            else:
+                return Vec2(x, y)
+
         return Vec2(self.x * other.x, self.y * other.y)
 
 

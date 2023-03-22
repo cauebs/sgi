@@ -1,5 +1,5 @@
-from dataclasses import dataclass, field
 import re
+from dataclasses import dataclass, field
 from itertools import chain
 from tkinter import Canvas, Event, Tk, simpledialog
 from typing import Iterable

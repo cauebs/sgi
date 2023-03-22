@@ -13,6 +13,7 @@ python = "^3.10"
 mypy = "^1.1.1"
 black = "^23.1.0"
 isort = "^5.12.0"
+pytest = "^7.2.2"
 
 [tool.poetry.scripts]
 sgi-run = "sgi.app:main"
