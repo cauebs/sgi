@@ -45,15 +45,16 @@ def apply_transformation(
 
 
 class DrawContext(Protocol):
-    def draw_point(self, point: WorldCoords) -> None:
+    def draw_point(self, point: WorldCoords, color: str) -> None:
         ...
 
-    def draw_line(self, start: WorldCoords, end: WorldCoords) -> None:
+    def draw_line(self, start: WorldCoords, end: WorldCoords, color: str) -> None:
         ...
 
 
 class Drawable(Protocol):
     name: str
+    color: str
 
     def draw(self, ctx: DrawContext) -> None:
         ...
@@ -68,10 +69,11 @@ class Drawable(Protocol):
 @dataclass
 class Point:
     name: str
+    color: str
     position: WorldCoords
 
     def draw(self, ctx: DrawContext) -> None:
-        ctx.draw_point(self.position)
+        ctx.draw_point(self.position, color=self.color)
 
     def apply_transformation(self, matrix: TransformationMatrix) -> None:
         self.position = apply_transformation(self.position, matrix)
@@ -83,11 +85,12 @@ class Point:
 @dataclass
 class Line:
     name: str
+    color: str
     start: WorldCoords
     end: WorldCoords
 
     def draw(self, ctx: DrawContext) -> None:
-        ctx.draw_line(self.start, self.end)
+        ctx.draw_line(self.start, self.end, color=self.color)
 
     def apply_transformation(self, matrix: TransformationMatrix) -> None:
         self.start = apply_transformation(self.start, matrix)
@@ -100,12 +103,13 @@ class Line:
 @dataclass
 class Polygon:
     name: str
+    color: str
     points: list[WorldCoords]
 
     def draw(self, ctx: DrawContext) -> None:
         for start, end in zip(self.points, self.points[1:]):
-            ctx.draw_line(start, end)
-        ctx.draw_line(self.points[-1], self.points[0])
+            ctx.draw_line(start, end, color=self.color)
+        ctx.draw_line(self.points[-1], self.points[0], color=self.color)
 
     def apply_transformation(self, matrix: TransformationMatrix) -> None:
         self.points = [

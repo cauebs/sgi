@@ -36,6 +36,7 @@ class GraphicalViewer:
             self._app_window,
             width=self.viewport_size.x,
             height=self.viewport_size.y,
+            background="black",
         )
         self._canvas.pack()
         self.bind_keys()
@@ -65,6 +66,8 @@ class GraphicalViewer:
         root.bind("s", lambda _: pan_window(Vec2(0, -amount)))
         root.bind("d", lambda _: pan_window(Vec2(amount, 0)))
 
+        root.bind("c", lambda _: self.show_color_dialog())
+
         root.bind("o", lambda _: self.show_add_point_dialog())
         root.bind("l", lambda _: self.show_add_line_dialog())
         root.bind("p", lambda _: self.show_add_polygon_dialog())
@@ -73,6 +76,19 @@ class GraphicalViewer:
         root.bind("e", lambda _: ScalingDialog(root, controller))
         root.bind("r", lambda _: RotationDialog(root, controller))
         root.bind("t", lambda _: TranslationDialog(root, controller))
+
+    def show_color_dialog(self) -> None:
+        color = tkinter.simpledialog.askstring(
+            "Definir cor",
+            "Insira uma cor para ser usada nos próximos objetos criados "
+            "(e.g. '#fff', '#abcdef', 'green'):",
+            initialvalue="white",
+            parent=self._app_window,
+        )
+        if not color:
+            return
+
+        self._controller.set_color(color)
 
     def show_add_point_dialog(self) -> None:
         raw_text = tkinter.simpledialog.askstring(
@@ -116,23 +132,23 @@ class GraphicalViewer:
         for drawable in drawables:
             drawable.draw(self)
 
-    def draw_point(self, point: WorldCoords) -> None:
+    def draw_point(self, point: WorldCoords, color: str) -> None:
         coords = self._controller.apply_viewport_transform(point)
         self._canvas.create_oval(
             coords.x - 1,
             coords.y - 1,
             coords.x + 1,
             coords.y + 1,
-            fill="black",
+            fill=color,
         )
 
-    def draw_line(self, start: WorldCoords, end: WorldCoords) -> None:
+    def draw_line(self, start: WorldCoords, end: WorldCoords, color: str) -> None:
         points = [
             self._controller.apply_viewport_transform(point) for point in [start, end]
         ]
         coordinates = [(p.x, p.y) for p in points]
 
-        self._canvas.create_line(*chain.from_iterable(coordinates))
+        self._canvas.create_line(*chain.from_iterable(coordinates), fill=color)
 
     def run(self) -> None:
         self._app_window.mainloop()

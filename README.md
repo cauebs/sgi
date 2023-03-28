@@ -4,6 +4,7 @@ $ python -m sgi
 ```
 
 # Using
+- `C` to change the color used for new objects
 - `O` to add a point
 - `L` to add a line
 - `P` to add a polygon

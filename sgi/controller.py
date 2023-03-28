@@ -23,6 +23,7 @@ class Controller:
     _graphical_viewer: Optional["GraphicalViewer"] = None
     _original_window_pos: WorldCoords = field(init=False)
     _original_window_size: WorldCoords = field(init=False)
+    _current_color: str = "white"
 
     def __post_init__(self) -> None:
         self._original_window_pos = self._window_pos
@@ -53,6 +54,9 @@ class Controller:
         self._window_size = self._original_window_size
         self._update_view()
 
+    def set_color(self, color: str) -> None:
+        self._current_color = color
+
     def _find_unused_name(self, prefix: str) -> str:
         for i in count(start=1):
             name = f"{prefix} {i}"
@@ -65,22 +69,22 @@ class Controller:
 
     def create_point(self, coordinates: WorldCoords) -> Point:
         name = self._find_unused_name("Ponto")
-        point = Point(name, coordinates)
-        self._display_file.append(point)
+        point = Point(name, self._current_color, coordinates)
+        self._display_file[name] = point
         self._update_view()
         return point
 
     def create_line(self, start: WorldCoords, end: WorldCoords) -> Line:
         name = self._find_unused_name("Reta")
-        line = Line(name, start, end)
-        self._display_file.append(line)
+        line = Line(name, self._current_color, start, end)
+        self._display_file[name] = line
         self._update_view()
         return line
 
     def create_polygon(self, points: Iterable[WorldCoords]) -> Polygon:
         name = self._find_unused_name("Polígono")
-        polygon = Polygon(name, list(points))
-        self._display_file.append(polygon)
+        polygon = Polygon(name, self._current_color, list(points))
+        self._display_file[name] = polygon
         self._update_view()
         return polygon
 
