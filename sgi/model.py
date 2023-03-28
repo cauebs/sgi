@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Generic, Protocol, TypeAlias, TypeVar, Union
+from typing import Generic, Protocol, TypeAlias, TypeVar
 
 Number = TypeVar("Number", int, float)
 
@@ -15,20 +15,33 @@ class Vec2(Generic[Number]):
     def __sub__(self, other: "Vec2[Number]") -> "Vec2[Number]":
         return Vec2(self.x - other.x, self.y - other.y)
 
-    def __mul__(self, other: Union["Vec2[Number]", float]) -> "Vec2[Number]":
-        if isinstance(other, float):
-            x = self.x * other
-            y = self.y * other
-            if isinstance(self.x, int):
-                return Vec2(int(x), int(y))
-            else:
-                return Vec2(x, y)
+    def __mul__(self, scalar: float) -> "Vec2[float]":
+        return Vec2(self.x * scalar, self.y * scalar)
 
-        return Vec2(self.x * other.x, self.y * other.y)
+    def __truediv__(self, scalar: float) -> "Vec2[float]":
+        return Vec2(self.x / scalar, self.y / scalar)
+
+    def __neg__(self) -> "Vec2[float]":
+        return Vec2(-self.x, -self.y)
 
 
 WorldCoords: TypeAlias = Vec2[float]
 PixelCoords: TypeAlias = Vec2[int]
+TransformationMatrix: TypeAlias = tuple[
+    tuple[float, float, float],
+    tuple[float, float, float],
+    tuple[float, float, float],
+]
+
+
+def apply_transformation(
+    point: WorldCoords, matrix: TransformationMatrix
+) -> WorldCoords:
+    line = [point.x, point.y, 1]
+    columns = zip(*matrix)
+    x, y, one = [sum(a * b for a, b in zip(line, column)) for column in columns]
+    assert one == 1
+    return Vec2(x, y)
 
 
 class DrawContext(Protocol):
@@ -45,6 +58,12 @@ class Drawable(Protocol):
     def draw(self, ctx: DrawContext) -> None:
         ...
 
+    def apply_transformation(self, matrix: TransformationMatrix) -> None:
+        ...
+
+    def get_center(self) -> WorldCoords:
+        ...
+
 
 @dataclass
 class Point:
@@ -53,6 +72,12 @@ class Point:
 
     def draw(self, ctx: DrawContext) -> None:
         ctx.draw_point(self.position)
+
+    def apply_transformation(self, matrix: TransformationMatrix) -> None:
+        self.position = apply_transformation(self.position, matrix)
+
+    def get_center(self) -> WorldCoords:
+        return self.position
 
 
 @dataclass
@@ -64,6 +89,13 @@ class Line:
     def draw(self, ctx: DrawContext) -> None:
         ctx.draw_line(self.start, self.end)
 
+    def apply_transformation(self, matrix: TransformationMatrix) -> None:
+        self.start = apply_transformation(self.start, matrix)
+        self.end = apply_transformation(self.end, matrix)
+
+    def get_center(self) -> WorldCoords:
+        return (self.start + self.end) / 2
+
 
 @dataclass
 class Polygon:
@@ -74,3 +106,12 @@ class Polygon:
         for start, end in zip(self.points, self.points[1:]):
             ctx.draw_line(start, end)
         ctx.draw_line(self.points[-1], self.points[0])
+
+    def apply_transformation(self, matrix: TransformationMatrix) -> None:
+        self.points = [
+            apply_transformation(point, matrix)
+            for point in self.points
+        ]
+
+    def get_center(self) -> WorldCoords:
+        return sum(self.points, start=Vec2(0., 0.)) / len(self.points)
