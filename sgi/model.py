@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import Generic, Protocol, TypeAlias, TypeVar
+from functools import reduce
+from typing import Generic, Protocol, Sequence, TypeAlias, TypeVar, cast, overload
 
 Number = TypeVar("Number", int, float)
 
@@ -27,21 +28,57 @@ class Vec2(Generic[Number]):
 
 WorldCoords: TypeAlias = Vec2[float]
 PixelCoords: TypeAlias = Vec2[int]
-TransformationMatrix: TypeAlias = tuple[
+TransformMatrix: TypeAlias = tuple[
     tuple[float, float, float],
     tuple[float, float, float],
     tuple[float, float, float],
 ]
 
 
-def apply_transformation(
-    point: WorldCoords, matrix: TransformationMatrix
+@overload
+def _multiply(
+    lhs: TransformMatrix, rhs: TransformMatrix
+) -> TransformMatrix:
+    ...
+
+
+@overload
+def _multiply(lhs: TransformMatrix, rhs: Vec2[float]) -> Vec2[float]:
+    ...
+
+
+def _multiply(
+    lhs: TransformMatrix, rhs: TransformMatrix | Vec2[float]
+) -> TransformMatrix | Vec2[float]:
+    lhs_lines = lhs
+    rhs_columns = list(zip(*rhs)) if isinstance(rhs, tuple) else [(rhs.x, rhs.y, 1)]
+
+    result = tuple(
+        tuple(sum(a * b for a, b in zip(line, column)) for column in rhs_columns)
+        for line in lhs_lines
+    )
+    assert len(result) == 3
+
+    if isinstance(rhs, Vec2):
+        assert all(len(row) == 1 for row in result)
+        x, y, one = (row[0] for row in result)
+        assert one == 1
+        return Vec2(x, y)
+
+    assert all(len(row) == 3 for row in result)
+    return cast(TransformMatrix, result)
+
+
+def compose_transforms(
+    matrices: Sequence[TransformMatrix]
+) -> TransformMatrix:
+    return reduce(_multiply, reversed(matrices))
+
+
+def apply_transform(
+    point: WorldCoords, matrix: TransformMatrix
 ) -> WorldCoords:
-    line = [point.x, point.y, 1]
-    columns = zip(*matrix)
-    x, y, one = [sum(a * b for a, b in zip(line, column)) for column in columns]
-    assert one == 1
-    return Vec2(x, y)
+    return _multiply(matrix, point)
 
 
 class DrawContext(Protocol):
@@ -59,7 +96,7 @@ class Drawable(Protocol):
     def draw(self, ctx: DrawContext) -> None:
         ...
 
-    def apply_transformation(self, matrix: TransformationMatrix) -> None:
+    def apply_transform(self, matrix: TransformMatrix) -> None:
         ...
 
     def get_center(self) -> WorldCoords:
@@ -75,8 +112,8 @@ class Point:
     def draw(self, ctx: DrawContext) -> None:
         ctx.draw_point(self.position, color=self.color)
 
-    def apply_transformation(self, matrix: TransformationMatrix) -> None:
-        self.position = apply_transformation(self.position, matrix)
+    def apply_transform(self, matrix: TransformMatrix) -> None:
+        self.position = apply_transform(self.position, matrix)
 
     def get_center(self) -> WorldCoords:
         return self.position
@@ -92,9 +129,9 @@ class Line:
     def draw(self, ctx: DrawContext) -> None:
         ctx.draw_line(self.start, self.end, color=self.color)
 
-    def apply_transformation(self, matrix: TransformationMatrix) -> None:
-        self.start = apply_transformation(self.start, matrix)
-        self.end = apply_transformation(self.end, matrix)
+    def apply_transform(self, matrix: TransformMatrix) -> None:
+        self.start = apply_transform(self.start, matrix)
+        self.end = apply_transform(self.end, matrix)
 
     def get_center(self) -> WorldCoords:
         return (self.start + self.end) / 2
@@ -111,11 +148,8 @@ class Polygon:
             ctx.draw_line(start, end, color=self.color)
         ctx.draw_line(self.points[-1], self.points[0], color=self.color)
 
-    def apply_transformation(self, matrix: TransformationMatrix) -> None:
-        self.points = [
-            apply_transformation(point, matrix)
-            for point in self.points
-        ]
+    def apply_transform(self, matrix: TransformMatrix) -> None:
+        self.points = [apply_transform(point, matrix) for point in self.points]
 
     def get_center(self) -> WorldCoords:
-        return sum(self.points, start=Vec2(0., 0.)) / len(self.points)
+        return sum(self.points, start=Vec2(0.0, 0.0)) / len(self.points)

@@ -4,7 +4,17 @@ from itertools import count
 from math import cos, sin, radians
 from typing import TYPE_CHECKING, Iterable, Optional
 
-from .model import Drawable, Line, PixelCoords, Point, Polygon, Vec2, WorldCoords
+from .model import (
+    Drawable,
+    Line,
+    PixelCoords,
+    Point,
+    Polygon,
+    TransformMatrix,
+    Vec2,
+    WorldCoords,
+    compose_transforms,
+)
 
 if TYPE_CHECKING:
     from .view import GraphicalViewer
@@ -13,6 +23,36 @@ if TYPE_CHECKING:
 class RotationCenter(Enum):
     OBJECT_CENTER = "centro do objeto"
     ORIGIN = "origem"
+
+
+def make_scale_matrix(factors: Vec2[float]) -> TransformMatrix:
+    x = factors.x
+    y = factors.y
+    return (
+        (x, 0, 0),
+        (0, y, 0),
+        (0, 0, 1),
+    )
+
+
+def make_rotation_matrix(degrees: float) -> TransformMatrix:
+    c = cos(radians(degrees))
+    s = sin(radians(degrees))
+    return (
+        (c, -s, 0),
+        (s, c, 0),
+        (0, 0, 1),
+    )
+
+
+def make_translate_matrix(delta: Vec2[float]) -> TransformMatrix:
+    x = delta.x
+    y = delta.y
+    return (
+        (1, 0, x),
+        (0, 1, y),
+        (0, 0, 1),
+    )
 
 
 @dataclass
@@ -43,7 +83,7 @@ class Controller:
 
     def zoom_window(self, zoom_center: PixelCoords, amount: float) -> None:
         zoom_center_before = self.apply_inverse_viewport_transform(zoom_center)
-        self._window_size *= (1 + amount)
+        self._window_size *= 1 + amount
         zoom_center_after = self.apply_inverse_viewport_transform(zoom_center)
         pan_correction = zoom_center_after - zoom_center_before
         self._window_pos -= Vec2(pan_correction.x, -pan_correction.y)
@@ -89,61 +129,53 @@ class Controller:
         return polygon
 
     def scale_object(self, obj: str | Drawable, scale_factors: Vec2[float]) -> None:
-        x = scale_factors.x
-        y = scale_factors.y
-        matrix = (
-            (x, 0, 0),
-            (0, y, 0),
-            (0, 0, 1),
-        )
-
         if isinstance(obj, str):
             obj = self._display_file[obj]
 
-        obj.apply_transformation(matrix)
+        center = obj.get_center()
+        matrix = compose_transforms(
+            [
+                make_translate_matrix(-center),
+                make_scale_matrix(scale_factors),
+                make_translate_matrix(center),
+            ]
+        )
+
+        obj.apply_transform(matrix)
         self._update_view()
 
     def rotate_object(
         self,
         obj: str | Drawable,
         center_of_rotation: RotationCenter | WorldCoords,
-        angle: float,
+        degrees: float,
     ) -> None:
         if isinstance(obj, str):
             obj = self._display_file[obj]
 
+        matrix = make_rotation_matrix(degrees)
+
         if center_of_rotation is not RotationCenter.ORIGIN:
             if center_of_rotation is RotationCenter.OBJECT_CENTER:
                 center_of_rotation = obj.get_center()
-            self.translate_object(obj, -center_of_rotation)
+            matrix = compose_transforms(
+                [
+                    make_translate_matrix(-center_of_rotation),
+                    matrix,
+                    make_translate_matrix(center_of_rotation),
+                ]
+            )
 
-        c = cos(radians(angle))
-        s = sin(radians(angle))
-        matrix = (
-            (c, -s, 0),
-            (s, c, 0),
-            (0, 0, 1),
-        )
-        obj.apply_transformation(matrix)
-
-        if center_of_rotation is not RotationCenter.ORIGIN:
-            self.translate_object(obj, center_of_rotation)
-
+        obj.apply_transform(matrix)
         self._update_view()
 
     def translate_object(self, obj: str | Drawable, delta: WorldCoords) -> None:
-        x = delta.x
-        y = delta.y
-        matrix = (
-            (1, 0, 0),
-            (0, 1, 0),
-            (x, y, 1),
-        )
+        matrix = make_translate_matrix(delta)
 
         if isinstance(obj, str):
             obj = self._display_file[obj]
 
-        obj.apply_transformation(matrix)
+        obj.apply_transform(matrix)
         self._update_view()
 
     def apply_viewport_transform(self, point: WorldCoords) -> PixelCoords:
