@@ -1,7 +1,9 @@
+from pathlib import Path
 import re
 from dataclasses import dataclass, field
 from itertools import chain
 import tkinter
+import tkinter.filedialog
 import tkinter.simpledialog
 import tkinter.ttk
 import tkinter.messagebox
@@ -80,6 +82,9 @@ class GraphicalViewer:
         root.bind("r", lambda _: RotationDialog(root, controller))
         root.bind("t", lambda _: TranslationDialog(root, controller))
 
+        root.bind("<Control-o>", lambda _: self.show_file_open_dialog())
+        root.bind("<Control-s>", lambda _: self.show_file_save_dialog())
+
     def show_color_dialog(self) -> None:
         color = tkinter.simpledialog.askstring(
             "Definir cor",
@@ -129,6 +134,23 @@ class GraphicalViewer:
             _parse_vec(p) for p in _split_points_into_lines(raw_text).splitlines()
         )
         self._controller.create_polygon(points)
+
+    def show_file_open_dialog(self) -> None:
+        file_path = Path(tkinter.filedialog.askopenfilename(
+            parent=self._app_window,
+            title="Import OBJ file",
+            filetypes=[("OBJ file", "*.obj")],
+        ))
+        self._controller.load_obj(file_path)
+
+    def show_file_save_dialog(self) -> None:
+        file_path = Path(tkinter.filedialog.asksaveasfilename(
+            parent=self._app_window,
+            title="Export OBJ file",
+            filetypes=[("OBJ file", "*.obj")],
+            defaultextension=".obj",
+        ))
+        self._controller.save_obj(file_path)
 
     def repaint(self, drawables: Iterable[Drawable]) -> None:
         self._canvas.delete("all")

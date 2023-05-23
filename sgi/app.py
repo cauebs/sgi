@@ -19,6 +19,8 @@ def main() -> None:
             - `E` to select and scale an object
             - `R` to select and rotate an object
             - `T` to select and translate an object
+            - `Ctrl+O` to open an OBJ file
+            - `Ctrl+S` to save to an OBJ file
             - `WASD` to pan
             - `Z` and `X` to rotate the view
             - Mouse wheel to zoom

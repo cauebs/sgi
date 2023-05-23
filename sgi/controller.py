@@ -2,7 +2,10 @@ from dataclasses import astuple, dataclass, field
 from enum import Enum
 from itertools import count
 from math import cos, sin, radians
+from pathlib import Path
 from typing import TYPE_CHECKING, Iterable, Optional
+
+from .obj import OBJReader, OBJWriter
 
 from .model import (
     Drawable,
@@ -128,6 +131,35 @@ class Controller:
         self._display_file[name] = polygon
         self._update_view()
         return polygon
+
+    def load_obj(self, file_path: Path) -> None:
+        self._display_file.clear()
+
+        reader = OBJReader()
+        reader.read(file_path)
+
+        for line in reader.iter_lines():
+            start, end = line
+            self.create_line(start, end)
+        for face in reader.iter_faces():
+            vertices = face
+            self.create_polygon(vertices)
+
+        self._update_view()
+
+    def save_obj(self, file_path: Path) -> None:
+        writer = OBJWriter()
+
+        for obj in self._display_file.values():
+            match obj:
+                case Line(start=start, end=end):
+                    writer.add_line([start, end])
+                case Polygon(points=vertices):
+                    writer.add_face(vertices)
+                case _:
+                    raise Exception(f"Can't serialize {obj}")
+
+        writer.write(file_path)
 
     def scale_object(self, obj: str | Drawable, scale_factors: Vec2[float]) -> None:
         if isinstance(obj, str):
