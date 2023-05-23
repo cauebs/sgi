@@ -12,4 +12,5 @@ $ python -m sgi
 - `R` to select and rotate an object
 - `T` to select and translate an object
 - `WASD` to pan
+- `Z` and `X` to rotate the view
 - Mouse wheel to zoom

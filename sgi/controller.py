@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import astuple, dataclass, field
 from enum import Enum
 from itertools import count
 from math import cos, sin, radians
@@ -26,8 +26,7 @@ class RotationCenter(Enum):
 
 
 def make_scale_matrix(factors: Vec2[float]) -> TransformMatrix:
-    x = factors.x
-    y = factors.y
+    x, y = astuple(factors)
     return (
         (x, 0, 0),
         (0, y, 0),
@@ -46,8 +45,7 @@ def make_rotation_matrix(degrees: float) -> TransformMatrix:
 
 
 def make_translate_matrix(delta: Vec2[float]) -> TransformMatrix:
-    x = delta.x
-    y = delta.y
+    x, y = astuple(delta)
     return (
         (1, 0, x),
         (0, 1, y),
@@ -88,6 +86,9 @@ class Controller:
         pan_correction = zoom_center_after - zoom_center_before
         self._window_pos -= Vec2(pan_correction.x, -pan_correction.y)
         self._update_view()
+
+    def rotate_window(self, degrees: int) -> None:
+        raise NotImplementedError()
 
     def reset_window(self, scale: float) -> None:
         self._window_pos = self._original_window_pos

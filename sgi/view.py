@@ -28,6 +28,7 @@ class GraphicalViewer:
     _canvas: tkinter.Canvas = field(init=False)
     _zoom_amount: float = 0.1
     _pan_amount: int = 10
+    _rotation_degrees: int = 15
 
     def __post_init__(self) -> None:
         self._app_window.title("SGI")
@@ -54,17 +55,20 @@ class GraphicalViewer:
 
     def bind_keys(self) -> None:
         root = self._app_window
+        controller = self._controller
 
         root.bind("<MouseWheel>", self._handle_scroll)
         root.bind("<Button-4>", self._handle_scroll)
         root.bind("<Button-5>", self._handle_scroll)
 
-        pan_window = self._controller.pan_window
         amount = self._pan_amount
-        root.bind("w", lambda _: pan_window(Vec2(0, amount)))
-        root.bind("a", lambda _: pan_window(Vec2(-amount, 0)))
-        root.bind("s", lambda _: pan_window(Vec2(0, -amount)))
-        root.bind("d", lambda _: pan_window(Vec2(amount, 0)))
+        root.bind("w", lambda _: controller.pan_window(Vec2(0, amount)))
+        root.bind("a", lambda _: controller.pan_window(Vec2(-amount, 0)))
+        root.bind("s", lambda _: controller.pan_window(Vec2(0, -amount)))
+        root.bind("d", lambda _: controller.pan_window(Vec2(amount, 0)))
+
+        root.bind("z", lambda _: controller.rotate_window(-self._rotation_degrees))
+        root.bind("x", lambda _: controller.rotate_window(self._rotation_degrees))
 
         root.bind("c", lambda _: self.show_color_dialog())
 
@@ -72,7 +76,6 @@ class GraphicalViewer:
         root.bind("l", lambda _: self.show_add_line_dialog())
         root.bind("p", lambda _: self.show_add_polygon_dialog())
 
-        controller = self._controller
         root.bind("e", lambda _: ScalingDialog(root, controller))
         root.bind("r", lambda _: RotationDialog(root, controller))
         root.bind("t", lambda _: TranslationDialog(root, controller))
